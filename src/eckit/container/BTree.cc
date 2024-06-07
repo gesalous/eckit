@@ -62,7 +62,9 @@ void BTree<K, V, S, L>::_NodePage::print(std::ostream& s) const {
 
 template <class K, class V, int S, class L>
 BTree<K, V, S, L>::BTree(const PathName& path, bool readOnly, off_t offset) :
-    path_(path), file_(path, readOnly), cacheReads_(true), cacheWrites_(true), readOnly_(readOnly), offset_(offset) {
+    // path_(path), file_(path, readOnly), cacheReads_(true), cacheWrites_(true), readOnly_(readOnly), offset_(offset) {
+    // gesalous
+    path_(path), file_(path, readOnly), cacheReads_(false), cacheWrites_(false), readOnly_(readOnly), offset_(offset) {
     file_.open();
 
     AutoLock<BTree<K, V, S, L> > lock(this);
@@ -429,7 +431,6 @@ bool BTree<K, V, S, L>::search(unsigned long page, const K& key, V& result) cons
     loadPage(page, p);
 
     // std::cout << "Search " << key << ", Visit " << p << std::endl;
-
     if (p.node_) {
         return search(next(key, p), key, result);
     }
@@ -438,7 +439,6 @@ bool BTree<K, V, S, L>::search(unsigned long page, const K& key, V& result) cons
     const LeafEntry* end   = begin + p.count_;
 
     const LeafEntry* e = std::lower_bound(begin, end, key);
-
     if ((e != end) && ((*e).key_ == key)) {
         result = (*e).value_;
         return true;
@@ -460,15 +460,17 @@ bool BTree<K, V, S, L>::remove(const K&) {
     NOTIMP;
 }
 
+#define NUM_KEYS 2
 template <class K, class V, int S, class L>
 template <class T>
 void BTree<K, V, S, L>::search(unsigned long page, const K& key1, const K& key2, T& result) {
     Page p;
     loadPage(page, p);
 
-    // std::cout << "Search " << key << ", Visit " << p << std::endl;
+    // std::cerr << "Search " << key << ", Visit " << p << std::endl;
 
     if (p.node_) {
+        std::cerr << __FILE__ << ", " << __func__ << ", " << __LINE__ << std::endl;
         return search(next(key1, p), key1, key2, result);
     }
 
@@ -476,7 +478,6 @@ void BTree<K, V, S, L>::search(unsigned long page, const K& key1, const K& key2,
     const LeafEntry* end   = begin + p.count_;
 
     const LeafEntry* e = std::lower_bound(begin, end, key1);
-
     if (e == end)
         return;
 
@@ -492,10 +493,14 @@ void BTree<K, V, S, L>::search(unsigned long page, const K& key1, const K& key2,
         // std::cout << " last "   << (*last).key_ << std::endl;
     }
 
+    int count  = 0;
     while (!(key2 < (*e).key_)) {
+        
         // std::cout << "match " << p.id_ << " pos " << (e - begin) << " " << (*e).key_ <<
         // std::endl;
         result.push_back(result_type((*e).key_, (*e).value_));
+        if(++count == NUM_KEYS)
+          break;
 
         ++e;
         if (e == end) {
